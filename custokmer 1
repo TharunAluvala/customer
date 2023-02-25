@@ -1,0 +1,52 @@
+import random 
+from datetime import date, timedelta
+from flask import Flask, jsonify, request
+from collections import defaultdict
+
+
+
+customers = ['Tharun', 'Manikanta', 'Jithu']
+
+transactions = []
+
+for i in range(1000):
+    customer = random.choice(customers)
+    purchase_date = date.today() - timedelta(days=random.randint(0, 90))
+    amount = random.randint(50, 200)
+    transactions.append({'customer': customer, 'purchase date': purchase_date, 'amount': amount})
+def calculate_reward_points(amount):
+    reward_points = 0
+    if amount > 100:
+        reward_points += (amount - 100) * 2
+        amount = 100
+    if amount > 50:
+        reward_points += (amount - 50) * 1
+    return reward_points
+
+for transaction in transactions:
+    transaction['reward points'] = calculate_reward_points(transaction['amount'])
+transactions_by_customer_month = defaultdict(lambda: defaultdict(list))
+
+for transaction in transactions:
+    customer = transaction['customer']
+    month = transaction['purchase_date'].strftime('%Y-%m')
+    transactions_by_customer_month[customer][month].append(transaction)
+
+
+reward_points_by_customer_month = defaultdict(lambda: defaultdict(int))
+
+for customer, transactions_by_month in transactions_by_customer_month.items():
+    for month, transactions in transactions_by_month.items():
+        reward_points = sum(transaction['reward_points'] for transaction in transactions)
+        reward_points_by_customer_month[customer][month] = reward_points
+
+app = Flask(__name__)
+
+@app.route('/rewards')
+def rewards():
+    customer = request.args.get('customer')
+    reward_points_by_month = reward_points_by_customer_month[customer]
+    return jsonify(reward_points_by_month)
+
+if __name__ == '__main__':
+    app.run()
